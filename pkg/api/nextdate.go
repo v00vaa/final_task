@@ -46,7 +46,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		}
 		for {
 			start = start.AddDate(0, 0, interval)
-			if start.After(now) {
+			if afterNow(start, now) {
 				return start.Format(DateFormat), nil
 			}
 		}
@@ -56,7 +56,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		}
 		for {
 			start = start.AddDate(1, 0, 0)
-			if start.After(now) {
+			if afterNow(start, now) {
 				return start.Format(DateFormat), nil
 			}
 		}
@@ -142,8 +142,8 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 						0, 0, 0, 0,
 						time.Local,
 					)
-					if candidate.After(now) &&
-						candidate.After(start) {
+					if afterNow(candidate, now) &&
+						afterNow(candidate, start) {
 
 						if !found || candidate.Before(result) {
 							result = candidate
