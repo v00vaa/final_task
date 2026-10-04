@@ -6,7 +6,11 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func Init(r chi.Router) {
+var password string
+
+func Init(r chi.Router, configuredPassword string) {
+	password = configuredPassword
+
 	r.Post("/api/signin", loginHandler)
 
 	r.Get("/api/nextdate", nextDateHandler)
@@ -20,5 +24,5 @@ func Init(r chi.Router) {
 
 	r.Get("/api/tasks", auth(tasksHandler))
 
-	r.Handle("/*", http.FileServer(http.Dir("./web")))
+	r.Method(http.MethodGet, "/*", http.FileServer(http.Dir("./web")))
 }

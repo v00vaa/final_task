@@ -1,4 +1,4 @@
-FROM golang:latest AS builder
+FROM golang:1.26 AS builder
 
 WORKDIR /app
 
@@ -10,14 +10,13 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o scheduler .
 
 
-FROM ubuntu:latest
+FROM alpine:3.22
 
 WORKDIR /app
 
 COPY --from=builder /app/scheduler .
 COPY web ./web
 
-EXPOSE 7540
 
 ENV TODO_PORT=7540
 ENV TODO_DBFILE=/data/scheduler.db

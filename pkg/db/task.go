@@ -2,8 +2,15 @@ package db
 
 import (
 	"database/sql"
-	"fmt"
+	"errors"
 	"time"
+)
+
+const dateFormat = "20060102"
+
+var (
+	ErrIncorrectIdUpdate = errors.New("incorrect id for updating task")
+	ErrIncorrectIdDelete = errors.New("incorrect id for deleting task")
 )
 
 type Task struct {
@@ -45,7 +52,7 @@ func Tasks(limit int, search string) ([]*Task, error) {
 			query += `
                 WHERE date = :date
             `
-			args = append(args, sql.Named("date", date.Format("20060102")))
+			args = append(args, sql.Named("date", date.Format(dateFormat)))
 		} else {
 			query += `
                 WHERE title LIKE :search
@@ -91,7 +98,6 @@ func GetTask(id string) (*Task, error) {
 }
 
 func UpdateTask(task *Task) error {
-	// параметры пропущены, не забудьте указать WHERE
 	query := `
 	UPDATE scheduler SET date=:date, title=:title, comment=:comment, repeat=:repeat
 	WHERE id=:id
@@ -106,14 +112,12 @@ func UpdateTask(task *Task) error {
 	if err != nil {
 		return err
 	}
-	// метод RowsAffected() возвращает количество записей к которым
-	// была применена SQL команда
 	count, err := res.RowsAffected()
 	if err != nil {
 		return err
 	}
 	if count == 0 {
-		return fmt.Errorf(`incorrect id for updating task`)
+		return ErrIncorrectIdUpdate
 	}
 	return nil
 }
@@ -131,7 +135,7 @@ func DeleteTask(id string) error {
 		return err
 	}
 	if count == 0 {
-		return fmt.Errorf(`incorrect id for deleting task`)
+		return ErrIncorrectIdDelete
 	}
 	return nil
 }
@@ -153,7 +157,7 @@ func UpdateDate(next string, id string) error {
 		return err
 	}
 	if count == 0 {
-		return fmt.Errorf(`incorrect id for updating task`)
+		return ErrIncorrectIdUpdate
 	}
 	return nil
 }

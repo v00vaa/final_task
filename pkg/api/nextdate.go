@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -78,6 +79,9 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		}
 
 		date := now
+		if afterNow(start, date) {
+			date = start
+		}
 		for i := 1; i <= 7; i++ {
 			date = date.AddDate(0, 0, 1)
 			weekday := int(date.Weekday())
@@ -101,6 +105,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 				if err != nil || month < 1 || month > 12 {
 					return "", fmt.Errorf("%w: %s", ErrInvalidMonth, v)
 				}
+
 				months[month] = true
 			}
 		}
@@ -109,8 +114,44 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 			if err != nil {
 				return "", fmt.Errorf("%w: %s", ErrInvalidMonthDay, v)
 			}
+
 			if day == 0 || day > 31 || day < -2 {
 				return "", fmt.Errorf("%w: %s", ErrInvalidMonthDay, v)
+			}
+		}
+		if len(months) > 0 {
+			possible := false
+
+			for month := range months {
+				lastDay := time.Date(
+					2024,
+					time.Month(month)+1,
+					0,
+					0, 0, 0, 0,
+					time.Local,
+				).Day()
+
+				for _, v := range days {
+					day, err := strconv.Atoi(v)
+					if err != nil {
+						return "", fmt.Errorf("%w: %s", ErrInvalidMonthDay, v)
+					}
+
+					// Отрицательные дни (-1, -2) существуют
+					// в любом месяце.
+					if day < 0 || day <= lastDay {
+						possible = true
+						break
+					}
+				}
+
+				if possible {
+					break
+				}
+			}
+
+			if !possible {
+				return "", fmt.Errorf("%w: %s", ErrInvalidMonthDay, repeat)
 			}
 		}
 		date := start
@@ -118,46 +159,50 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 			year := date.Year()
 			month := date.Month()
 			if len(months) == 0 || months[int(month)] {
+				lastDay := time.Date(
+					year,
+					month+1,
+					0,
+					0, 0, 0, 0,
+					time.Local,
+				).Day()
 				var result time.Time
 				found := false
 				for _, v := range days {
-					day, _ := strconv.Atoi(v)
-					lastDay := time.Date(
-						year,
-						month+1,
-						0,
-						0, 0, 0, 0,
-						time.Local,
-					).Day()
-					if day < 0 {
-						day = lastDay + day + 1
+					day, err := strconv.Atoi(v)
+					if err != nil {
+						return "", fmt.Errorf("%w: %s", ErrInvalidMonthDay, v)
 					}
-					if day < 1 || day > lastDay {
+					actualDay := day
+					if actualDay < 0 {
+						actualDay = lastDay + actualDay + 1
+					}
+					if actualDay < 1 || actualDay > lastDay {
 						continue
 					}
 					candidate := time.Date(
 						year,
 						month,
-						day,
+						actualDay,
 						0, 0, 0, 0,
 						time.Local,
 					)
-					if afterNow(candidate, now) &&
-						afterNow(candidate, start) {
-
-						if !found || candidate.Before(result) {
-							result = candidate
-							found = true
-						}
+					if !afterNow(candidate, now) {
+						continue
+					}
+					if !found || candidate.Before(result) {
+						result = candidate
+						found = true
 					}
 				}
 				if found {
 					return result.Format(DateFormat), nil
 				}
 			}
+			date = date.AddDate(0, 1, 0)
 			date = time.Date(
-				year,
-				month+1,
+				date.Year(),
+				date.Month(),
 				1,
 				0, 0, 0, 0,
 				time.Local,
@@ -194,5 +239,7 @@ func nextDateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(result))
+	if _, err := w.Write([]byte(result)); err != nil {
+		log.Printf("write response: %v", err)
+	}
 }

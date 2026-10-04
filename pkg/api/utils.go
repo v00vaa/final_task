@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -9,8 +10,8 @@ import (
 )
 
 func afterNow(taskDate, now time.Time) bool {
-	nowDate := now.Format("20060102")
-	taskDateStr := taskDate.Format("20060102")
+	nowDate := now.Format(DateFormat)
+	taskDateStr := taskDate.Format(DateFormat)
 
 	return taskDateStr > nowDate
 }
@@ -18,9 +19,9 @@ func afterNow(taskDate, now time.Time) bool {
 func checkDate(task *db.Task) error {
 	now := time.Now()
 	if task.Date == "" {
-		task.Date = now.Format("20060102")
+		task.Date = now.Format(DateFormat)
 	}
-	t, err := time.Parse("20060102", task.Date)
+	t, err := time.Parse(DateFormat, task.Date)
 	if err != nil {
 		return err
 	}
@@ -31,24 +32,22 @@ func checkDate(task *db.Task) error {
 			return err
 		}
 	}
-	// если сегодня (now) больше task.Date (t)
 	if afterNow(now, t) {
-		// если правила повторения нет, то берём сегодняшнее число
 		if task.Repeat == "" {
-			task.Date = now.Format("20060102")
+			task.Date = now.Format(DateFormat)
 		} else {
-			// в противном случае, берём вычисленную ранее следующую дату
 			task.Date = next
 		}
 	}
 	return nil
 }
 
-func writeJSON(w http.ResponseWriter, data any) {
-	w.Header().Set(
-		"Content-Type",
-		"application/json; charset=UTF-8",
-	)
+func writeJSON(w http.ResponseWriter, status int, data any) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.WriteHeader(status)
 
-	json.NewEncoder(w).Encode(data)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		log.Printf("write response: %v", err)
+
+	}
 }

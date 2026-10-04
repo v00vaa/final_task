@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -31,9 +30,7 @@ func checkToken(jwtToken, password string) bool {
 
 func auth(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// смотрим наличие пароля
-		pass := os.Getenv("TODO_PASSWORD")
-		if len(pass) > 0 {
+		if len(password) > 0 {
 			var jwtToken string // JWT-токен из куки
 			// получаем куку
 			cookie, err := r.Cookie("token")
@@ -41,9 +38,8 @@ func auth(next http.HandlerFunc) http.HandlerFunc {
 				jwtToken = cookie.Value
 			}
 			var valid bool
-			valid = checkToken(jwtToken, pass)
+			valid = checkToken(jwtToken, password)
 			if !valid {
-				// возвращаем ошибку авторизации 401
 				http.Error(w, "Authentification required", http.StatusUnauthorized)
 				return
 			}
@@ -69,26 +65,25 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
-		writeJSON(w, map[string]string{
+		writeJSON(w, http.StatusBadRequest, map[string]string{
 			"error": err.Error(),
 		})
 		return
 	}
-	systemPassword := os.Getenv("TODO_PASSWORD")
-	if request.Password != systemPassword {
-		writeJSON(w, map[string]string{
+	if request.Password != password {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{
 			"error": "Неверный пароль",
 		})
 		return
 	}
-	token, err := generateToken(systemPassword)
+	token, err := generateToken(password)
 	if err != nil {
-		writeJSON(w, map[string]string{
+		writeJSON(w, http.StatusInternalServerError, map[string]string{
 			"error": err.Error(),
 		})
 		return
 	}
-	writeJSON(w, map[string]string{
+	writeJSON(w, http.StatusOK, map[string]string{
 		"token": token,
 	})
 }
