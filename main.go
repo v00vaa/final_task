@@ -45,6 +45,6 @@ func main() {
 	defer db.Close()
 
 	if err := server.Run(cfg.Port, cfg.Password); err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 }

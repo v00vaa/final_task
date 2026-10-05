@@ -54,5 +54,5 @@ jobs:
           context: .
           push: true
           tags: |
-            v00vaa/final_task:${{ github.ref_name }}
-            v00vaa/final_task:latest
+            v00vaa/scheduler:${{ github.ref_name }}
+            v00vaa/scheduler:latest

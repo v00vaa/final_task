@@ -155,6 +155,11 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 			}
 		}
 		date := start
+		searchFrom := now
+
+		if afterNow(start, searchFrom) {
+			searchFrom = start
+		}
 		for {
 			year := date.Year()
 			month := date.Month()
@@ -187,7 +192,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 						0, 0, 0, 0,
 						time.Local,
 					)
-					if !afterNow(candidate, now) {
+					if !afterNow(candidate, searchFrom) {
 						continue
 					}
 					if !found || candidate.Before(result) {
