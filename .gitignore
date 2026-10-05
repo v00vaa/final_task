@@ -1,0 +1,5 @@
+.env
+/identifier.sqlite
+/final_task.exe
+*.db
+.idea/
